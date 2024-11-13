@@ -35,7 +35,7 @@ delete_webhook()
 user_states = {}  # тут будем хранить информацию о действиях пользователя
 
 # набор символов из которых составляем изображение
-ASCII_CHARS = '@%#*+=-:. '
+DEFAULT_ASCII_CHARS = '@%#*+=-:. '
 
 
 def resize_image(image, new_width=100):
@@ -72,13 +72,14 @@ def grayify(image):
     return image.convert("L")
 
 
-def image_to_ascii(image_stream, new_width=40):
+def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS):
     """
     Преобразует изображение в ASCII-арт.
 
     Args:
         image_stream (io.BytesIO): Поток данных изображения.
         new_width (int): Новая ширина изображения для ASCII-арта.
+        ascii_chars (str): Набор символов для ASCII-арта.
 
     Returns:
         str: ASCII-арт изображения.
@@ -92,7 +93,7 @@ def image_to_ascii(image_stream, new_width=40):
     new_height = int(aspect_ratio * new_width * 0.55)  # 0,55 так как буквы выше чем шире
     img_resized = image.resize((new_width, new_height))
 
-    img_str = pixels_to_ascii(img_resized)
+    img_str = pixels_to_ascii(img_resized, ascii_chars)
     img_width = img_resized.width
 
     # Ограничиваем количество символов для сообщения в Telegram
@@ -106,12 +107,13 @@ def image_to_ascii(image_stream, new_width=40):
     return ascii_art
 
 
-def pixels_to_ascii(image):
+def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS):
     """
     Преобразует пиксельные данные изображения в ASCII-символы.
 
     Args:
         image (PIL.Image.Image): Изображение в оттенках серого.
+        ascii_chars (str): Набор символов для ASCII-арта.
 
     Returns:
         str: Строка ASCII-символов, представляющая изображение.
@@ -119,11 +121,10 @@ def pixels_to_ascii(image):
     pixels = image.getdata()
     characters = ""
     for pixel in pixels:
-        characters += ASCII_CHARS[pixel * len(ASCII_CHARS) // 256]
+        characters += ascii_chars[pixel * len(ascii_chars) // 256]
     return characters
 
 
-# Огрубляем изображение
 def pixelate_image(image, pixel_size):
     """
     Пикселизирует изображение.
@@ -170,7 +171,7 @@ def handle_photo(message):
     bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
                  reply_markup=get_options_keyboard())
     # Сохраняем ID фотографии в состояние пользователя
-    user_states[message.chat.id] = {'photo': message.photo[-1].file_id}
+    user_states[message.chat.id] = {'photo': message.photo[-1].file_id, 'ascii_chars': None}
 
 
 def get_options_keyboard():
@@ -211,7 +212,20 @@ def callback_query(call):
     # Если пользователь выбрал преобразование в ASCII-арт
     elif call.data == "ascii":
         bot.answer_callback_query(call.id, "Преобразование вашего изображения в формат ASCII art...")
-        ascii_and_send(call.message)
+        bot.send_message(call.message.chat.id, "Пожалуйста, введите набор символов для ASCII-арта.")
+        user_states[call.message.chat.id]['ascii_chars'] = 'waiting'
+
+
+@bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('ascii_chars') == 'waiting')
+def get_ascii_chars(message):
+    """
+    Обрабатывает ввод пользователя для набора символов для ASCII-арта.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+    """
+    user_states[message.chat.id]['ascii_chars'] = message.text
+    ascii_and_send(message)
 
 
 def pixelate_and_send(message):
@@ -254,6 +268,8 @@ def ascii_and_send(message):
     """
     # Получаем ID фотографии из состояния пользователя
     photo_id = user_states[message.chat.id]['photo']
+    # Получаем набор символов из состояния пользователя
+    ascii_chars = user_states[message.chat.id]['ascii_chars']
 
     # Получаем информацию о файле по его ID
     file_info = bot.get_file(photo_id)
@@ -264,8 +280,8 @@ def ascii_and_send(message):
     # Создаем поток данных из скачанного файла
     image_stream = io.BytesIO(downloaded_file)
 
-    # Преобразуем изображение в ASCII-арт
-    ascii_art = image_to_ascii(image_stream)
+    # Преобразуем изображение в ASCII-арт с использованием пользовательского набора символов
+    ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars)
 
     # Отправляем ASCII-арт пользователю с использованием MarkdownV2
     bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
