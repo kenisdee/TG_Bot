@@ -156,7 +156,9 @@ def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS):
         pixels = image.getdata()
         characters = ""
         for pixel in pixels:
-            characters += ascii_chars[pixel * len(ascii_chars) // 256]
+            # Убеждаемся, что индекс является целым числом
+            index = int(pixel * len(ascii_chars) // 256)
+            characters += ascii_chars[index]
         return characters
     except Exception as e:
         logger.error(f"Ошибка при преобразовании пикселей в символы ASCII: {e}")
@@ -179,12 +181,12 @@ def pixelate_image(image, pixel_size):
         # Уменьшаем изображение до размера, кратного pixel_size
         image = image.resize(
             (image.size[0] // pixel_size, image.size[1] // pixel_size),
-            Image.NEAREST
+            resample=Image.Resampling.NEAREST
         )
         # Увеличиваем изображение обратно до исходного размера, используя метод ближайшего соседа
         image = image.resize(
             (image.size[0] * pixel_size, image.size[1] * pixel_size),
-            Image.NEAREST
+            resample=Image.Resampling.NEAREST
         )
         return image
     except Exception as e:
