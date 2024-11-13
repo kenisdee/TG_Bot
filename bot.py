@@ -1,8 +1,13 @@
 import io
+import logging
 
 import telebot
 from PIL import Image
 from telebot import types
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 # Функция для чтения токена из файла
@@ -13,7 +18,8 @@ def get_token():
     Returns:
         str: Токен бота.
     """
-    with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:
+    logger.info("Чтение токена бота из файла")
+    with open('/путь/к/файлу/token.txt', 'r') as file:
         return file.read().strip()
 
 
@@ -27,6 +33,7 @@ def delete_webhook():
     """
     Удаляет вебхук, если он активен.
     """
+    logger.info("Удаление webhook, если он активен")
     bot.remove_webhook()
 
 
@@ -49,6 +56,7 @@ def resize_image(image, new_width=100):
     Returns:
         PIL.Image.Image: Измененное изображение.
     """
+    logger.info(f"Изменение размера изображения по ширине: {new_width}")
     # Получаем текущие размеры изображения
     width, height = image.size
     # Вычисляем отношение высоты к ширине
@@ -69,6 +77,7 @@ def grayify(image):
     Returns:
         PIL.Image.Image: Изображение в оттенках серого.
     """
+    logger.info("Преобразование изображения в оттенки серого")
     return image.convert("L")
 
 
@@ -84,6 +93,7 @@ def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS):
     Returns:
         str: ASCII-арт изображения.
     """
+    logger.info(f"Преобразование изображения в формат ASCII с указанием ширины: {new_width} and chars: {ascii_chars}")
     # Переводим в оттенки серого
     image = Image.open(image_stream).convert('L')
 
@@ -118,6 +128,7 @@ def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS):
     Returns:
         str: Строка ASCII-символов, представляющая изображение.
     """
+    logger.info(f"Преобразование пикселей в символы ASCII с использованием символов chars: {ascii_chars}")
     pixels = image.getdata()
     characters = ""
     for pixel in pixels:
@@ -136,6 +147,7 @@ def pixelate_image(image, pixel_size):
     Returns:
         PIL.Image.Image: Пикселизированное изображение.
     """
+    logger.info(f"Растровое изображение с размером в пиксель: {pixel_size}")
     # Уменьшаем изображение до размера, кратного pixel_size
     image = image.resize(
         (image.size[0] // pixel_size, image.size[1] // pixel_size),
@@ -157,6 +169,7 @@ def send_welcome(message):
     Args:
         message (telebot.types.Message): Сообщение от пользователя.
     """
+    logger.info(f"Обработка команды /start или /help от пользователя: {message.chat.id}")
     bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!")
 
 
@@ -168,6 +181,7 @@ def handle_photo(message):
     Args:
         message (telebot.types.Message): Сообщение от пользователя с фотографией.
     """
+    logger.info(f"Обработка фотографий от пользователя: {message.chat.id}")
     bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
                  reply_markup=get_options_keyboard())
     # Сохраняем ID фотографии в состояние пользователя
@@ -181,6 +195,7 @@ def get_options_keyboard():
     Returns:
         telebot.types.InlineKeyboardMarkup: Клавиатура с вариантами действий.
     """
+    logger.info("Создание параметров клавиатуры")
     # Создаем инлайн-клавиатуру
     keyboard = types.InlineKeyboardMarkup()
 
@@ -205,6 +220,7 @@ def callback_query(call):
     Args:
         call (telebot.types.CallbackQuery): Объект, представляющий запрос обратного вызова.
     """
+    logger.info(f"Обработка запроса обратного вызова от пользователя: {call.message.chat.id}, data: {call.data}")
     # Если пользователь выбрал пикселизацию изображения
     if call.data == "pixelate":
         bot.answer_callback_query(call.id, "Пикселизация вашего изображения...")
@@ -224,6 +240,7 @@ def get_ascii_chars(message):
     Args:
         message (telebot.types.Message): Сообщение от пользователя.
     """
+    logger.info(f"Обработка символов ASCII, вводимых пользователем: {message.chat.id}")
     user_states[message.chat.id]['ascii_chars'] = message.text
     ascii_and_send(message)
 
@@ -235,6 +252,7 @@ def pixelate_and_send(message):
     Args:
         message (telebot.types.Message): Сообщение от пользователя.
     """
+    logger.info(f"Пикселизация и отправка изображения пользователю: {message.chat.id}")
     # Получаем ID фотографии из состояния пользователя
     photo_id = user_states[message.chat.id]['photo']
     # Получаем информацию о файле по его ID
@@ -266,6 +284,7 @@ def ascii_and_send(message):
     Args:
         message (telebot.types.Message): Сообщение от пользователя.
     """
+    logger.info(f"Преобразование изображения в формат ASCII и отправка пользователю: {message.chat.id}")
     # Получаем ID фотографии из состояния пользователя
     photo_id = user_states[message.chat.id]['photo']
     # Получаем набор символов из состояния пользователя
