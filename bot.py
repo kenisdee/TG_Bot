@@ -1,6 +1,5 @@
 import io
 import logging
-
 import telebot
 from PIL import Image, UnidentifiedImageError, ImageOps
 from telebot import types
