@@ -22,7 +22,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/путь/к/файлу/token.txt', 'r') as file:
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file: # /путь/к/файлу/token.txt
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -183,6 +183,30 @@ def invert_colors(image):
     return ImageOps.invert(image)
 
 
+# Функция для отражения изображения
+@log_function
+def mirror_image(image, direction):
+    """
+    Отражает изображение по горизонтали или вертикали.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+        direction (str): Направление отражения ('horizontal' или 'vertical').
+
+    Returns:
+        PIL.Image: Отраженное изображение.
+    """
+    if direction == 'horizontal':
+        # Отражаем изображение по горизонтали
+        return ImageOps.mirror(image)
+    elif direction == 'vertical':
+        # Отражаем изображение по вертикали
+        return ImageOps.flip(image)
+    else:
+        # Выбрасываем исключение, если направление неверное
+        raise ValueError("Неверное направление отражения. Используйте 'horizontal' или 'vertical'.")
+
+
 # Обработчик команд /start и /help
 @bot.message_handler(commands=['start', 'help'])
 @log_function
@@ -202,15 +226,6 @@ def handle_photo(message):
     user_states[message.chat.id] = {'photo': message.photo[-1].file_id, 'ascii_chars': None}
 
 
-# Обработчик получения фотографий
-@bot.message_handler(content_types=['photo'])
-@log_function
-def handle_photo(message):
-    bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
-                 reply_markup=get_options_keyboard())
-    user_states[message.chat.id] = {'photo': message.photo[-1].file_id, 'ascii_chars': None}
-
-
 # Функция для создания клавиатуры с вариантами действий
 @log_function
 def get_options_keyboard():
@@ -222,8 +237,12 @@ def get_options_keyboard():
     ascii_btn = types.InlineKeyboardButton("ASCII-арт", callback_data="ascii")
     # Создаем кнопку для инверсии цветов изображения
     invert_btn = types.InlineKeyboardButton("Инвертировать цвета", callback_data="invert")
+    # Создаем кнопку для отражения изображения по горизонтали
+    mirror_horizontal_btn = types.InlineKeyboardButton("Отразить по горизонтали", callback_data="mirror_horizontal")
+    # Создаем кнопку для отражения изображения по вертикали
+    mirror_vertical_btn = types.InlineKeyboardButton("Отразить по вертикали", callback_data="mirror_vertical")
     # Добавляем кнопки на клавиатуру
-    keyboard.add(pixelate_btn, ascii_btn, invert_btn)
+    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_horizontal_btn, mirror_vertical_btn)
     # Возвращаем созданную клавиатуру
     return keyboard
 
@@ -250,6 +269,16 @@ def callback_query(call):
         bot.answer_callback_query(call.id, "Инверсия цветов вашего изображения...")
         # Обрабатываем изображение с помощью функции инверсии цветов
         process_image(call.message, invert_colors)
+    elif call.data == "mirror_horizontal":
+        # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
+        bot.answer_callback_query(call.id, "Отражение вашего изображения по горизонтали...")
+        # Обрабатываем изображение с помощью функции отражения по горизонтали
+        process_image(call.message, mirror_image, 'horizontal')
+    elif call.data == "mirror_vertical":
+        # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
+        bot.answer_callback_query(call.id, "Отражение вашего изображения по вертикали...")
+        # Обрабатываем изображение с помощью функции отражения по вертикали
+        process_image(call.message, mirror_image, 'vertical')
 
 
 # Обработчик ввода символов для ASCII-арта
