@@ -22,7 +22,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file: # /путь/к/файлу/token.txt
+        with open('/путь/к/файлу/token.txt', 'r') as file:
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -63,20 +63,39 @@ user_states = {}
 # Набор символов для создания ASCII-арта
 DEFAULT_ASCII_CHARS = '@%#*+=-:. '
 
+# Словарь для сопоставления названий функций с действиями пользователя
+function_to_action = {
+    'pixelate_image': 'пикселизирует изображение',
+    'image_to_ascii': 'преобразует изображение в ASCII-арт',
+    'invert_colors': 'инвертирует цвета изображения',
+    'mirror_image': 'отражает изображение',
+    'send_welcome': 'отправляет приветственное сообщение',
+    'handle_photo': 'отправляет фотографию',
+    'get_options_keyboard': 'получает клавиатуру с вариантами действий',
+    'callback_query': 'обрабатывает запрос обратного вызова',
+    'get_ascii_chars': 'вводит символы для ASCII-арта',
+    'process_image': 'обрабатывает изображение',
+    'process_ascii_art': 'обрабатывает ASCII-арт'
+}
 
-# Декоратор для логирования
+
+# Декоратор для логирования с учетом ID пользователя
 def log_function(func):
     # Декоратор для логирования вызовов функций и обработки ошибок
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # Логируем вызов функции
-        logger.info(f"Вызов функции {func.__name__}")
+        # Получаем ID пользователя из аргументов функции
+        user_id = kwargs.get('user_id')
+        # Получаем действие пользователя из словаря
+        action = function_to_action.get(func.__name__, f"выполняет неизвестное действие ({func.__name__})")
+        # Логируем действие пользователя с учетом ID пользователя
+        logger.info(f"Пользователь с ID {user_id} {action}")
         try:
             # Вызываем исходную функцию и возвращаем её результат
             return func(*args, **kwargs)
         except Exception as e:
-            # Логируем ошибку, если она возникла
-            logger.error(f"Ошибка в функции {func.__name__}: {e}")
+            # Логируем ошибку, если она возникла, с учетом ID пользователя
+            logger.error(f"Ошибка в функции {func.__name__} пользователя с ID {user_id}: {e}")
             # Поднимаем исключение дальше
             raise
 
@@ -87,14 +106,14 @@ def log_function(func):
 # Функция для обработки ошибок
 def handle_error(message, error_message):
     # Логируем ошибку с использованием переданного сообщения об ошибке
-    logger.error(error_message)
+    logger.error(f"Ошибка для пользователя с ID {message.chat.id}: {error_message}")
     # Отправляем сообщение пользователю о том, что произошла ошибка при обработке изображения
     bot.send_message(message.chat.id, "Произошла ошибка при обработке изображения.")
 
 
 # Функция для изменения размера изображения
 @log_function
-def resize_image(image, new_width=100):
+def resize_image(image, new_width=100, user_id=None):
     # Получаем текущие размеры изображения
     width, height = image.size
     # Вычисляем соотношение сторон
@@ -107,14 +126,14 @@ def resize_image(image, new_width=100):
 
 # Функция для преобразования изображения в оттенки серого
 @log_function
-def grayify(image):
+def grayify(image, user_id=None):
     # Преобразуем изображение в оттенки серого и возвращаем его
     return image.convert("L")
 
 
 # Функция для преобразования изображения в ASCII-арт
 @log_function
-def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS):
+def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS, user_id=None):
     # Открываем изображение из потока и преобразуем его в оттенки серого
     image = Image.open(image_stream).convert('L')
     # Получаем размеры изображения
@@ -144,7 +163,7 @@ def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS):
 
 # Функция для преобразования пикселей в ASCII-символы
 @log_function
-def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS):
+def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS, user_id=None):
     # Получаем данные о пикселях изображения
     pixels = image.getdata()
     # Инициализируем строку для хранения ASCII-символов
@@ -161,7 +180,7 @@ def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS):
 
 # Функция для пикселизации изображения
 @log_function
-def pixelate_image(image, pixel_size):
+def pixelate_image(image, pixel_size, user_id=None):
     # Уменьшаем изображение до размера, кратного pixel_size, используя метод ближайшего соседа
     image = image.resize(
         (image.size[0] // pixel_size, image.size[1] // pixel_size),
@@ -178,14 +197,14 @@ def pixelate_image(image, pixel_size):
 
 # Функция для инверсии цветов изображения
 @log_function
-def invert_colors(image):
+def invert_colors(image, user_id=None):
     # Инвертируем цвета изображения с помощью функции invert из модуля ImageOps
     return ImageOps.invert(image)
 
 
 # Функция для отражения изображения
 @log_function
-def mirror_image(image, direction):
+def mirror_image(image, direction, user_id=None):
     """
     Отражает изображение по горизонтали или вертикали.
 
@@ -210,7 +229,7 @@ def mirror_image(image, direction):
 # Обработчик команд /start и /help
 @bot.message_handler(commands=['start', 'help'])
 @log_function
-def send_welcome(message):
+def send_welcome(message, user_id=None):
     # Отправляем приветственное сообщение пользователю
     bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!")
 
@@ -218,7 +237,7 @@ def send_welcome(message):
 # Обработчик получения фотографий
 @bot.message_handler(content_types=['photo'])
 @log_function
-def handle_photo(message):
+def handle_photo(message, user_id=None):
     # Отправляем ответное сообщение с предложением выбрать действие
     bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
                  reply_markup=get_options_keyboard())
@@ -228,7 +247,7 @@ def handle_photo(message):
 
 # Функция для создания клавиатуры с вариантами действий
 @log_function
-def get_options_keyboard():
+def get_options_keyboard(user_id=None):
     # Создаем объект клавиатуры
     keyboard = types.InlineKeyboardMarkup()
     # Создаем кнопку для пикселизации изображения
@@ -250,13 +269,13 @@ def get_options_keyboard():
 # Обработчик запросов обратного вызова
 @bot.callback_query_handler(func=lambda call: True)
 @log_function
-def callback_query(call):
+def callback_query(call, user_id=None):
     # Проверяем, какой вариант выбрал пользователь
     if call.data == "pixelate":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Пикселизация вашего изображения...")
         # Обрабатываем изображение с помощью функции пикселизации
-        process_image(call.message, pixelate_image, 20)
+        process_image(call.message, pixelate_image, 20, user_id=call.message.chat.id)
     elif call.data == "ascii":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Преобразование вашего изображения в формат ASCII art...")
@@ -268,32 +287,32 @@ def callback_query(call):
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Инверсия цветов вашего изображения...")
         # Обрабатываем изображение с помощью функции инверсии цветов
-        process_image(call.message, invert_colors)
+        process_image(call.message, invert_colors, user_id=call.message.chat.id)
     elif call.data == "mirror_horizontal":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Отражение вашего изображения по горизонтали...")
         # Обрабатываем изображение с помощью функции отражения по горизонтали
-        process_image(call.message, mirror_image, 'horizontal')
+        process_image(call.message, mirror_image, 'horizontal', user_id=call.message.chat.id)
     elif call.data == "mirror_vertical":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Отражение вашего изображения по вертикали...")
         # Обрабатываем изображение с помощью функции отражения по вертикали
-        process_image(call.message, mirror_image, 'vertical')
+        process_image(call.message, mirror_image, 'vertical', user_id=call.message.chat.id)
 
 
 # Обработчик ввода символов для ASCII-арта
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('ascii_chars') == 'waiting')
 @log_function
-def get_ascii_chars(message):
+def get_ascii_chars(message, user_id=None):
     # Сохраняем введенные пользователем символы для ASCII-арта
     user_states[message.chat.id]['ascii_chars'] = message.text
     # Вызываем функцию для обработки ASCII-арта с использованием введенных символов
-    process_ascii_art(message)
+    process_ascii_art(message, user_id=message.chat.id)
 
 
 # Функция для обработки изображения и отправки результата
 @log_function
-def process_image(message, image_processing_func, *args):
+def process_image(message, image_processing_func, *args, user_id=None):
     try:
         # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
@@ -306,7 +325,7 @@ def process_image(message, image_processing_func, *args):
         with io.BytesIO(downloaded_file) as image_stream:
             image = Image.open(image_stream)
             # Обрабатываем изображение с помощью переданной функции и аргументов
-            processed_image = image_processing_func(image, *args)
+            processed_image = image_processing_func(image, *args, user_id=user_id)
 
             # Создаем поток байтов для сохранения обработанного изображения
             with io.BytesIO() as output_stream:
@@ -326,7 +345,7 @@ def process_image(message, image_processing_func, *args):
 
 # Функция для обработки ASCII-арта и отправки результата
 @log_function
-def process_ascii_art(message):
+def process_ascii_art(message, user_id=None):
     try:
         # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
@@ -340,7 +359,7 @@ def process_ascii_art(message):
         # Открываем скачанный файл как поток байтов
         with io.BytesIO(downloaded_file) as image_stream:
             # Преобразуем изображение в ASCII-арт с использованием указанных символов
-            ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars)
+            ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars, user_id=user_id)
             # Отправляем ASCII-арт пользователю в виде форматированного сообщения
             bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
     except UnidentifiedImageError:
