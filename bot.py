@@ -352,21 +352,21 @@ def process_image(message, image_processing_func, *args):
         # Скачиваем файл по его пути
         downloaded_file = bot.download_file(file_info.file_path)
 
-        # Создаем поток данных из скачанного файла
-        image_stream = io.BytesIO(downloaded_file)
-        # Открываем изображение из потока данных
-        image = Image.open(image_stream)
-        # Обрабатываем изображение с помощью указанной функции
-        processed_image = image_processing_func(image, *args)
+        # Используем контекстный менеджер для работы с потоками данных
+        with io.BytesIO(downloaded_file) as image_stream:
+            # Открываем изображение из потока данных
+            image = Image.open(image_stream)
+            # Обрабатываем изображение с помощью указанной функции
+            processed_image = image_processing_func(image, *args)
 
-        # Создаем новый поток данных для сохранения обработанного изображения
-        output_stream = io.BytesIO()
-        # Сохраняем обработанное изображение в поток данных в формате JPEG
-        processed_image.save(output_stream, format="JPEG")
-        # Перемещаем указатель потока данных в начало
-        output_stream.seek(0)
-        # Отправляем обработанное изображение пользователю
-        bot.send_photo(message.chat.id, output_stream)
+            # Создаем новый поток данных для сохранения обработанного изображения
+            with io.BytesIO() as output_stream:
+                # Сохраняем обработанное изображение в поток данных в формате JPEG
+                processed_image.save(output_stream, format="JPEG")
+                # Перемещаем указатель потока данных в начало
+                output_stream.seek(0)
+                # Отправляем обработанное изображение пользователю
+                bot.send_photo(message.chat.id, output_stream)
     except UnidentifiedImageError:
         logger.error("Ошибка при открытии изображения")
         bot.send_message(message.chat.id, "Не удалось открыть изображение. Пожалуйста, попробуйте другое изображение.")
@@ -395,14 +395,13 @@ def process_ascii_art(message):
         # Скачиваем файл по его пути
         downloaded_file = bot.download_file(file_info.file_path)
 
-        # Создаем поток данных из скачанного файла
-        image_stream = io.BytesIO(downloaded_file)
+        # Используем контекстный менеджер для работы с потоками данных
+        with io.BytesIO(downloaded_file) as image_stream:
+            # Преобразуем изображение в ASCII-арт с использованием пользовательского набора символов
+            ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars)
 
-        # Преобразуем изображение в ASCII-арт с использованием пользовательского набора символов
-        ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars)
-
-        # Отправляем ASCII-арт пользователю с использованием MarkdownV2
-        bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
+            # Отправляем ASCII-арт пользователю с использованием MarkdownV2
+            bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
     except UnidentifiedImageError:
         logger.error("Ошибка при открытии изображения")
         bot.send_message(message.chat.id, "Не удалось открыть изображение. Пожалуйста, попробуйте другое изображение.")
