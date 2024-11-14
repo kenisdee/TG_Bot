@@ -1,5 +1,7 @@
 import io
 import logging
+import time
+from datetime import datetime
 from functools import wraps
 
 import telebot
@@ -22,7 +24,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/путь/к/файлу/token.txt', 'r') as file:
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:  # /путь/к/файлу/token.txt
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -79,27 +81,29 @@ function_to_action = {
 }
 
 
-# Декоратор для логирования с учетом ID пользователя
+# Декоратор для логирования вызовов функций и обработки ошибок
 def log_function(func):
-    # Декоратор для логирования вызовов функций и обработки ошибок
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # Получаем ID пользователя из аргументов функции
         user_id = kwargs.get('user_id')
-        # Получаем действие пользователя из словаря
         action = function_to_action.get(func.__name__, f"выполняет неизвестное действие ({func.__name__})")
-        # Логируем действие пользователя с учетом ID пользователя
-        logger.info(f"Пользователь с ID {user_id} {action}")
+        start_time = time.time()  # Засекаем время начала обработки
+        start_time_str = datetime.fromtimestamp(start_time).strftime(
+            '%d-%m-%Y %H:%M:%S')  # Преобразуем в формат день-месяц-год
+        logger.info(f"Начало операции: Пользователь с ID {user_id} {action} в {start_time_str}")
+
         try:
-            # Вызываем исходную функцию и возвращаем её результат
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
+            end_time = time.time()  # Засекаем время окончания обработки
+            end_time_str = datetime.fromtimestamp(end_time).strftime(
+                '%d-%m-%Y %H:%M:%S')  # Преобразуем в формат день-месяц-год
+            logger.info(
+                f"Конец операции: Пользователь с ID {user_id} {action} в {end_time_str}, время выполнения: {end_time - start_time} сек")
+            return result
         except Exception as e:
-            # Логируем ошибку, если она возникла, с учетом ID пользователя
             logger.error(f"Ошибка в функции {func.__name__} пользователя с ID {user_id}: {e}")
-            # Поднимаем исключение дальше
             raise
 
-    # Возвращаем обёрнутую функцию
     return wrapper
 
 
@@ -145,7 +149,7 @@ def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS, 
     # Изменяем размер изображения
     img_resized = image.resize((new_width, new_height))
     # Преобразуем пиксели изображения в ASCII-символы
-    img_str = pixels_to_ascii(img_resized, ascii_chars)
+    img_str = pixels_to_ascii(img_resized, ascii_chars, user_id=user_id)
     # Получаем ширину изображения после изменения размера
     img_width = img_resized.width
     # Вычисляем максимальное количество символов, которое можно отправить в одном сообщении
@@ -240,7 +244,7 @@ def send_welcome(message, user_id=None):
 def handle_photo(message, user_id=None):
     # Отправляем ответное сообщение с предложением выбрать действие
     bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
-                 reply_markup=get_options_keyboard())
+                 reply_markup=get_options_keyboard(user_id=message.chat.id))
     # Сохраняем ID фотографии и инициализируем поле для символов ASCII-арта
     user_states[message.chat.id] = {'photo': message.photo[-1].file_id, 'ascii_chars': None}
 
@@ -314,32 +318,24 @@ def get_ascii_chars(message, user_id=None):
 @log_function
 def process_image(message, image_processing_func, *args, user_id=None):
     try:
-        # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
-        # Получаем информацию о файле по его ID
         file_info = bot.get_file(photo_id)
-        # Скачиваем файл изображения
         downloaded_file = bot.download_file(file_info.file_path)
 
-        # Открываем изображение из потока байтов
         with io.BytesIO(downloaded_file) as image_stream:
             image = Image.open(image_stream)
-            # Обрабатываем изображение с помощью переданной функции и аргументов
+            width, height = image.size  # Получаем размер изображения
+            logger.info(f"Пользователь с ID {user_id} обрабатывает изображение размером {width}x{height} пикселей")
+
             processed_image = image_processing_func(image, *args, user_id=user_id)
 
-            # Создаем поток байтов для сохранения обработанного изображения
             with io.BytesIO() as output_stream:
-                # Сохраняем обработанное изображение в поток
                 processed_image.save(output_stream, format="JPEG")
-                # Перемещаем указатель потока в начало
                 output_stream.seek(0)
-                # Отправляем обработанное изображение пользователю
                 bot.send_photo(message.chat.id, output_stream)
     except UnidentifiedImageError:
-        # Обрабатываем ошибку, если изображение не удалось открыть
         handle_error(message, "Ошибка при открытии изображения")
     except Exception as e:
-        # Обрабатываем любые другие ошибки, возникшие при обработке и отправке изображения
         handle_error(message, f"Ошибка при обработке и отправке изображения: {e}")
 
 
@@ -347,26 +343,22 @@ def process_image(message, image_processing_func, *args, user_id=None):
 @log_function
 def process_ascii_art(message, user_id=None):
     try:
-        # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
-        # Получаем набор символов для ASCII-арта из состояния пользователя
         ascii_chars = user_states[message.chat.id]['ascii_chars']
-        # Получаем информацию о файле по его ID
         file_info = bot.get_file(photo_id)
-        # Скачиваем файл изображения
         downloaded_file = bot.download_file(file_info.file_path)
 
-        # Открываем скачанный файл как поток байтов
         with io.BytesIO(downloaded_file) as image_stream:
-            # Преобразуем изображение в ASCII-арт с использованием указанных символов
+            image = Image.open(image_stream)
+            width, height = image.size  # Получаем размер изображения
+            logger.info(
+                f"Пользователь с ID {user_id} преобразует изображение размером {width}x{height} пикселей в ASCII-арт с символами: {ascii_chars}")
+
             ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars, user_id=user_id)
-            # Отправляем ASCII-арт пользователю в виде форматированного сообщения
             bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
     except UnidentifiedImageError:
-        # Обрабатываем ошибку, если изображение не удалось открыть
         handle_error(message, "Ошибка при открытии изображения")
     except Exception as e:
-        # Обрабатываем любые другие ошибки, возникшие при обработке и отправке ASCII-арта
         handle_error(message, f"Ошибка при преобразовании изображения в ASCII-арт и отправке: {e}")
 
 
