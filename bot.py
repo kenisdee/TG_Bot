@@ -2,7 +2,7 @@ import io
 import logging
 
 import telebot
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError, ImageOps
 from telebot import types
 
 # Настройка логирования
@@ -20,7 +20,9 @@ def get_token():
     """
     logger.info("Чтение токена бота из файла")
     try:
-        with open('/путь/к/файлу/token.txt', 'r') as file:
+        # Открываем файл с токеном
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:  # /путь/к/файлу/token.txt
+            # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
         logger.error("Файл с токеном не найден")
@@ -29,7 +31,9 @@ def get_token():
 
 # Получаем токен
 try:
+    # Вызываем функцию для чтения токена
     TOKEN = get_token()
+    # Создаем экземпляр бота с использованием токена
     bot = telebot.TeleBot(TOKEN)
 except Exception as e:
     logger.error(f"Ошибка при получении токена: {e}")
@@ -43,16 +47,19 @@ def delete_webhook():
     """
     logger.info("Удаление webhook, если он активен")
     try:
+        # Удаляем вебхук, если он установлен
         bot.remove_webhook()
     except Exception as e:
         logger.error(f"Ошибка при удалении вебхука: {e}")
 
 
+# Вызываем функцию для удаления вебхука
 delete_webhook()
 
-user_states = {}  # тут будем хранить информацию о действиях пользователя
+# Словарь для хранения состояний пользователей
+user_states = {}
 
-# набор символов из которых составляем изображение
+# Набор символов для создания ASCII-арта
 DEFAULT_ASCII_CHARS = '@%#*+=-:. '
 
 
@@ -94,6 +101,7 @@ def grayify(image):
     """
     logger.info("Преобразование изображения в оттенки серого")
     try:
+        # Преобразуем изображение в оттенки серого
         return image.convert("L")
     except Exception as e:
         logger.error(f"Ошибка при преобразовании изображения в оттенки серого: {e}")
@@ -123,6 +131,7 @@ def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS):
         new_height = int(aspect_ratio * new_width * 0.55)  # 0,55 так как буквы выше чем шире
         img_resized = image.resize((new_width, new_height))
 
+        # Преобразуем пиксели в ASCII-символы
         img_str = pixels_to_ascii(img_resized, ascii_chars)
         img_width = img_resized.width
 
@@ -153,6 +162,7 @@ def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS):
     """
     logger.info(f"Преобразование пикселей в символы ASCII с использованием символов chars: {ascii_chars}")
     try:
+        # Получаем данные пикселей
         pixels = image.getdata()
         characters = ""
         for pixel in pixels:
@@ -194,6 +204,25 @@ def pixelate_image(image, pixel_size):
         return image
 
 
+def invert_colors(image):
+    """
+    Инвертирует цвета изображения.
+
+    Args:
+        image (PIL.Image.Image): Исходное изображение.
+
+    Returns:
+        PIL.Image.Image: Изображение с инвертированными цветами.
+    """
+    logger.info("Инвертирование цветов изображения")
+    try:
+        # Инвертируем цвета изображения
+        return ImageOps.invert(image)
+    except Exception as e:
+        logger.error(f"Ошибка при инвертировании цветов изображения: {e}")
+        return image
+
+
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     """
@@ -204,6 +233,7 @@ def send_welcome(message):
     """
     logger.info(f"Обработка команды /start или /help от пользователя: {message.chat.id}")
     try:
+        # Отправляем приветственное сообщение
         bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!")
     except Exception as e:
         logger.error(f"Ошибка при отправке приветственного сообщения: {e}")
@@ -219,6 +249,7 @@ def handle_photo(message):
     """
     logger.info(f"Обработка фотографий от пользователя: {message.chat.id}")
     try:
+        # Отправляем сообщение с предложением выбора действия
         bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
                      reply_markup=get_options_keyboard())
         # Сохраняем ID фотографии в состояние пользователя
@@ -240,13 +271,16 @@ def get_options_keyboard():
         keyboard = types.InlineKeyboardMarkup()
 
         # Добавляем кнопку для пикселизации изображения
-        pixelate_btn = types.InlineKeyboardButton("Pixelate", callback_data="pixelate")
+        pixelate_btn = types.InlineKeyboardButton("Пикселизация", callback_data="pixelate")
 
         # Добавляем кнопку для преобразования изображения в ASCII-арт
         ascii_btn = types.InlineKeyboardButton("ASCII Art", callback_data="ascii")
 
+        # Добавляем кнопку для инверсии цветов
+        invert_btn = types.InlineKeyboardButton("Инвертировать цвета", callback_data="invert")
+
         # Добавляем кнопки в клавиатуру
-        keyboard.add(pixelate_btn, ascii_btn)
+        keyboard.add(pixelate_btn, ascii_btn, invert_btn)
 
         # Возвращаем созданную клавиатуру
         return keyboard
@@ -268,12 +302,16 @@ def callback_query(call):
         # Если пользователь выбрал пикселизацию изображения
         if call.data == "pixelate":
             bot.answer_callback_query(call.id, "Пикселизация вашего изображения...")
-            pixelate_and_send(call.message)
+            process_image(call.message, pixelate_image, 20)
         # Если пользователь выбрал преобразование в ASCII-арт
         elif call.data == "ascii":
             bot.answer_callback_query(call.id, "Преобразование вашего изображения в формат ASCII art...")
             bot.send_message(call.message.chat.id, "Пожалуйста, введите набор символов для ASCII-арта.")
             user_states[call.message.chat.id]['ascii_chars'] = 'waiting'
+        # Если пользователь выбрал инверсию цветов
+        elif call.data == "invert":
+            bot.answer_callback_query(call.id, "Инверсия цветов вашего изображения...")
+            process_image(call.message, invert_colors)
     except Exception as e:
         logger.error(f"Ошибка при обработке запроса обратного вызова: {e}")
 
@@ -288,20 +326,24 @@ def get_ascii_chars(message):
     """
     logger.info(f"Обработка символов ASCII, вводимых пользователем: {message.chat.id}")
     try:
+        # Сохраняем введенные пользователем символы
         user_states[message.chat.id]['ascii_chars'] = message.text
-        ascii_and_send(message)
+        # Вызываем функцию для обработки ASCII-арта
+        process_ascii_art(message)
     except Exception as e:
         logger.error(f"Ошибка при обработке ввода символов ASCII: {e}")
 
 
-def pixelate_and_send(message):
+def process_image(message, image_processing_func, *args):
     """
-    Пикселизирует изображение и отправляет его пользователю.
+    Обрабатывает изображение с помощью указанной функции и отправляет результат пользователю.
 
     Args:
         message (telebot.types.Message): Сообщение от пользователя.
+        image_processing_func (function): Функция для обработки изображения.
+        *args: Дополнительные аргументы для функции обработки изображения.
     """
-    logger.info(f"Пикселизация и отправка изображения пользователю: {message.chat.id}")
+    logger.info(f"Обработка изображения пользователем: {message.chat.id}")
     try:
         # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
@@ -314,26 +356,26 @@ def pixelate_and_send(message):
         image_stream = io.BytesIO(downloaded_file)
         # Открываем изображение из потока данных
         image = Image.open(image_stream)
-        # Пикселизируем изображение с размером пикселя 20
-        pixelated = pixelate_image(image, 20)
+        # Обрабатываем изображение с помощью указанной функции
+        processed_image = image_processing_func(image, *args)
 
-        # Создаем новый поток данных для сохранения пикселизированного изображения
+        # Создаем новый поток данных для сохранения обработанного изображения
         output_stream = io.BytesIO()
-        # Сохраняем пикселизированное изображение в поток данных в формате JPEG
-        pixelated.save(output_stream, format="JPEG")
+        # Сохраняем обработанное изображение в поток данных в формате JPEG
+        processed_image.save(output_stream, format="JPEG")
         # Перемещаем указатель потока данных в начало
         output_stream.seek(0)
-        # Отправляем пикселизированное изображение пользователю
+        # Отправляем обработанное изображение пользователю
         bot.send_photo(message.chat.id, output_stream)
     except UnidentifiedImageError:
         logger.error("Ошибка при открытии изображения")
         bot.send_message(message.chat.id, "Не удалось открыть изображение. Пожалуйста, попробуйте другое изображение.")
     except Exception as e:
-        logger.error(f"Ошибка при пикселизации и отправке изображения: {e}")
+        logger.error(f"Ошибка при обработке и отправке изображения: {e}")
         bot.send_message(message.chat.id, "Произошла ошибка при обработке изображения.")
 
 
-def ascii_and_send(message):
+def process_ascii_art(message):
     """
     Преобразует изображение в ASCII-арт и отправляет его пользователю.
 
@@ -371,6 +413,7 @@ def ascii_and_send(message):
 
 # Запускаем бота
 try:
+    # Запускаем бота в режиме опроса
     bot.polling(none_stop=True)
 except Exception as e:
     logger.error(f"Ошибка при запуске бота: {e}")
