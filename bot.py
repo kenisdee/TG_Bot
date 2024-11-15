@@ -77,7 +77,8 @@ function_to_action = {
     'callback_query': 'обрабатывает запрос обратного вызова',
     'get_ascii_chars': 'вводит символы для ASCII-арта',
     'process_image': 'обрабатывает изображение',
-    'process_ascii_art': 'обрабатывает ASCII-арт'
+    'process_ascii_art': 'обрабатывает ASCII-арт',
+    'convert_to_heatmap': 'преобразует изображение в тепловую карту'
 }
 
 
@@ -230,6 +231,25 @@ def mirror_image(image, direction, user_id=None):
         raise ValueError("Неверное направление отражения. Используйте 'horizontal' или 'vertical'.")
 
 
+# Функция для преобразования изображения в тепловую карту
+@log_function
+def convert_to_heatmap(image, user_id=None):
+    """
+    Преобразует изображение в тепловую карту.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+
+    Returns:
+        PIL.Image: Изображение в виде тепловой карты.
+    """
+    # Преобразуем изображение в оттенки серого
+    gray_image = grayify(image, user_id=user_id)
+    # Применяем цветовую палитру для создания тепловой карты
+    heatmap_image = ImageOps.colorize(gray_image, black="blue", white="red")
+    return heatmap_image
+
+
 # Обработчик команд /start и /help
 @bot.message_handler(commands=['start', 'help'])
 @log_function
@@ -264,8 +284,10 @@ def get_options_keyboard(user_id=None):
     mirror_horizontal_btn = types.InlineKeyboardButton("Отразить по горизонтали", callback_data="mirror_horizontal")
     # Создаем кнопку для отражения изображения по вертикали
     mirror_vertical_btn = types.InlineKeyboardButton("Отразить по вертикали", callback_data="mirror_vertical")
+    # Создаем кнопку для преобразования изображения в тепловую карту
+    heatmap_btn = types.InlineKeyboardButton("Тепловая карта", callback_data="heatmap")
     # Добавляем кнопки на клавиатуру
-    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_horizontal_btn, mirror_vertical_btn)
+    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_horizontal_btn, mirror_vertical_btn, heatmap_btn)
     # Возвращаем созданную клавиатуру
     return keyboard
 
@@ -302,6 +324,11 @@ def callback_query(call, user_id=None):
         bot.answer_callback_query(call.id, "Отражение вашего изображения по вертикали...")
         # Обрабатываем изображение с помощью функции отражения по вертикали
         process_image(call.message, mirror_image, 'vertical', user_id=call.message.chat.id)
+    elif call.data == "heatmap":
+        # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
+        bot.answer_callback_query(call.id, "Преобразование вашего изображения в тепловую карту...")
+        # Обрабатываем изображение с помощью функции преобразования в тепловую карту
+        process_image(call.message, convert_to_heatmap, user_id=call.message.chat.id)
 
 
 # Обработчик ввода символов для ASCII-арта
