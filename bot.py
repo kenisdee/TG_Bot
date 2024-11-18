@@ -253,13 +253,13 @@ def convert_to_heatmap(image, user_id=None):
 
 # Функция для изменения размера изображения для стикера
 @log_function
-def resize_for_sticker(image, max_size=512, user_id=None):
+def resize_for_sticker(image, max_size=256, user_id=None):
     """
     Изменяет размер изображения, сохраняя пропорции, чтобы его максимальное измерение не превышало заданного максимума.
 
     Args:
         image (PIL.Image): Исходное изображение.
-        max_size (int): Максимальный размер изображения (по умолчанию 512 пикселей).
+        max_size (int): Максимальный размер изображения (по умолчанию 256 пикселей).
 
     Returns:
         PIL.Image: Изображение с измененным размером.
