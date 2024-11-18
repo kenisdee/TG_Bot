@@ -24,7 +24,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:  # /путь/к/файлу/token.txt
+        with open('/путь/к/файлу/token.txt', 'r') as file:
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -78,7 +78,8 @@ function_to_action = {
     'get_ascii_chars': 'вводит символы для ASCII-арта',
     'process_image': 'обрабатывает изображение',
     'process_ascii_art': 'обрабатывает ASCII-арт',
-    'convert_to_heatmap': 'преобразует изображение в тепловую карту'
+    'convert_to_heatmap': 'преобразует изображение в тепловую карту',
+    'resize_for_sticker': 'изменяет размер изображения для стикера'
 }
 
 
@@ -250,6 +251,30 @@ def convert_to_heatmap(image, user_id=None):
     return heatmap_image
 
 
+# Функция для изменения размера изображения для стикера
+@log_function
+def resize_for_sticker(image, max_size=512, user_id=None):
+    """
+    Изменяет размер изображения, сохраняя пропорции, чтобы его максимальное измерение не превышало заданного максимума.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+        max_size (int): Максимальный размер изображения (по умолчанию 512 пикселей).
+
+    Returns:
+        PIL.Image: Изображение с измененным размером.
+    """
+    # Получаем текущие размеры изображения
+    width, height = image.size
+    # Вычисляем соотношение сторон
+    ratio = min(max_size / width, max_size / height)
+    # Вычисляем новые размеры, сохраняя пропорции
+    new_width = int(width * ratio)
+    new_height = int(height * ratio)
+    # Изменяем размер изображения и возвращаем его
+    return image.resize((new_width, new_height), resample=Image.Resampling.BICUBIC)
+
+
 # Обработчик команд /start и /help
 @bot.message_handler(commands=['start', 'help'])
 @log_function
@@ -286,8 +311,11 @@ def get_options_keyboard(user_id=None):
     mirror_vertical_btn = types.InlineKeyboardButton("Отразить по вертикали", callback_data="mirror_vertical")
     # Создаем кнопку для преобразования изображения в тепловую карту
     heatmap_btn = types.InlineKeyboardButton("Тепловая карта", callback_data="heatmap")
+    # Создаем кнопку для изменения размера изображения для стикера
+    resize_sticker_btn = types.InlineKeyboardButton("Изменить размер для стикера", callback_data="resize_sticker")
     # Добавляем кнопки на клавиатуру
-    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_horizontal_btn, mirror_vertical_btn, heatmap_btn)
+    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_horizontal_btn, mirror_vertical_btn, heatmap_btn,
+                 resize_sticker_btn)
     # Возвращаем созданную клавиатуру
     return keyboard
 
@@ -329,6 +357,11 @@ def callback_query(call, user_id=None):
         bot.answer_callback_query(call.id, "Преобразование вашего изображения в тепловую карту...")
         # Обрабатываем изображение с помощью функции преобразования в тепловую карту
         process_image(call.message, convert_to_heatmap, user_id=call.message.chat.id)
+    elif call.data == "resize_sticker":
+        # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
+        bot.answer_callback_query(call.id, "Изменение размера изображения для стикера...")
+        # Обрабатываем изображение с помощью функции изменения размера для стикера
+        process_image(call.message, resize_for_sticker, user_id=call.message.chat.id)
 
 
 # Обработчик ввода символов для ASCII-арта
