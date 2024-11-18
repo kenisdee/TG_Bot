@@ -21,6 +21,7 @@ def get_token():
     Returns:
         str: Токен бота.
     """
+    # Логируем информацию о попытке чтения токена
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
@@ -28,6 +29,7 @@ def get_token():
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
+        # Логируем ошибку, если файл не найден
         logger.error("Файл с токеном не найден")
         raise
 
@@ -39,6 +41,7 @@ try:
     # Создаем экземпляр бота с использованием токена
     bot = telebot.TeleBot(TOKEN)
 except Exception as e:
+    # Логируем ошибку, если чтение токена не удалось
     logger.error(f"Ошибка при получении токена: {e}")
     raise
 
@@ -48,15 +51,18 @@ def delete_webhook():
     """
     Удаляет вебхук, если он активен.
     """
-    logger.info("Удаление webhook, если он активен")  # Логируем информацию о попытке удаления вебхука
+    # Логируем информацию о попытке удаления вебхука
+    logger.info("Удаление webhook, если он активен")
     try:
         # Удаляем вебхук, если он установлен
         bot.remove_webhook()  # Пытаемся удалить вебхук, если он был установлен
     except Exception as e:
-        logger.error(f"Ошибка при удалении вебхука: {e}")  # Логируем ошибку, если удаление вебхука не удалось
+        # Логируем ошибку, если удаление вебхука не удалось
+        logger.error(f"Ошибка при удалении вебхука: {e}")
+
+    # Вызываем функцию для удаления вебхука
 
 
-# Вызываем функцию для удаления вебхука
 delete_webhook()
 
 # Словарь для хранения состояний пользователей
@@ -92,20 +98,25 @@ def log_function(func):
         start_time = time.time()  # Засекаем время начала обработки
         start_time_str = datetime.fromtimestamp(start_time).strftime(
             '%d-%m-%Y %H:%M:%S')  # Преобразуем в формат день-месяц-год
-        logger.info(f"Начало операции: Пользователь с ID {user_id} {action} в {start_time_str}")
+        logger.info(
+            f"Начало операции: Пользователь с ID {user_id} {action} в {start_time_str}")  # Логируем начало операции
 
         try:
             result = func(*args, **kwargs)
             end_time = time.time()  # Засекаем время окончания обработки
             end_time_str = datetime.fromtimestamp(end_time).strftime(
                 '%d-%m-%Y %H:%M:%S')  # Преобразуем в формат день-месяц-год
+            # Логируем конец операции и время выполнения
             logger.info(
                 f"Конец операции: Пользователь с ID {user_id} {action} в {end_time_str}, время выполнения: {end_time - start_time} сек")
+            # Возвращаем результат выполнения функции
             return result
         except Exception as e:
+            # Логируем ошибку, если она произошла
             logger.error(f"Ошибка в функции {func.__name__} пользователя с ID {user_id}: {e}")
             raise
 
+    # Возвращаем обертку для функции
     return wrapper
 
 
@@ -126,14 +137,14 @@ def resize_image(image, new_width=100, user_id=None):
     ratio = height / width
     # Вычисляем новую высоту, сохраняя пропорции
     new_height = int(new_width * ratio)
-    # Изменяем размер изображения и возвращаем его
+    # Изменяем размер изображения и возвращаем его с новыми размерами
     return image.resize((new_width, new_height))
 
 
 # Функция для преобразования изображения в оттенки серого
 @log_function
 def grayify(image, user_id=None):
-    # Преобразуем изображение в оттенки серого и возвращаем его
+    # Преобразуем изображение в оттенки серого и возвращаем его в оттенках серого
     return image.convert("L")
 
 
@@ -163,7 +174,7 @@ def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS, 
     # Формируем ASCII-арт, добавляя по одной строке за раз
     for i in range(0, min(max_rows * img_width, len(img_str)), img_width):
         ascii_art += img_str[i:i + img_width] + "\n"
-    # Возвращаем готовый ASCII-арт
+    # Возвращаем сформированный ASCII-арт
     return ascii_art
 
 
@@ -222,10 +233,10 @@ def mirror_image(image, direction, user_id=None):
         PIL.Image: Отраженное изображение.
     """
     if direction == 'horizontal':
-        # Отражаем изображение по горизонтали
+        # Возвращаем изображение, отраженное по горизонтали
         return ImageOps.mirror(image)
     elif direction == 'vertical':
-        # Отражаем изображение по вертикали
+        # Возвращаем изображение, отраженное по вертикали
         return ImageOps.flip(image)
     else:
         # Выбрасываем исключение, если направление неверное
@@ -248,6 +259,7 @@ def convert_to_heatmap(image, user_id=None):
     gray_image = grayify(image, user_id=user_id)
     # Применяем цветовую палитру для создания тепловой карты
     heatmap_image = ImageOps.colorize(gray_image, black="blue", white="red")
+    # Возвращаем изображение в виде тепловой карты
     return heatmap_image
 
 
@@ -272,7 +284,8 @@ def resize_for_sticker(image, max_size=256, user_id=None):
     new_width = int(width * ratio)
     new_height = int(height * ratio)
     # Изменяем размер изображения и возвращаем его
-    return image.resize((new_width, new_height), resample=Image.Resampling.BICUBIC)
+    return image.resize((new_width, new_height),
+                        resample=Image.Resampling.BICUBIC)
 
 
 # Обработчик команд /start и /help
@@ -378,24 +391,38 @@ def get_ascii_chars(message, user_id=None):
 @log_function
 def process_image(message, image_processing_func, *args, user_id=None):
     try:
+        # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
+        # Получаем информацию о файле по его ID
         file_info = bot.get_file(photo_id)
+        # Скачиваем файл изображения
         downloaded_file = bot.download_file(file_info.file_path)
 
+        # Открываем скачанный файл как поток байтов
         with io.BytesIO(downloaded_file) as image_stream:
+            # Открываем изображение с помощью библиотеки PIL
             image = Image.open(image_stream)
-            width, height = image.size  # Получаем размер изображения
+            # Получаем размер изображения
+            width, height = image.size
+            # Логируем информацию о размере изображения и пользователе
             logger.info(f"Пользователь с ID {user_id} обрабатывает изображение размером {width}x{height} пикселей")
 
+            # Обрабатываем изображение с помощью переданной функции и аргументов
             processed_image = image_processing_func(image, *args, user_id=user_id)
 
+            # Создаем новый поток байтов для сохранения обработанного изображения
             with io.BytesIO() as output_stream:
+                # Сохраняем обработанное изображение в формате JPEG
                 processed_image.save(output_stream, format="JPEG")
+                # Перемещаем указатель потока в начало
                 output_stream.seek(0)
+                # Отправляем обработанное изображение пользователю
                 bot.send_photo(message.chat.id, output_stream)
     except UnidentifiedImageError:
+        # Обрабатываем ошибку, если изображение не удалось открыть
         handle_error(message, "Ошибка при открытии изображения")
     except Exception as e:
+        # Обрабатываем любые другие ошибки и логируем их
         handle_error(message, f"Ошибка при обработке и отправке изображения: {e}")
 
 
@@ -403,22 +430,34 @@ def process_image(message, image_processing_func, *args, user_id=None):
 @log_function
 def process_ascii_art(message, user_id=None):
     try:
+        # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
+        # Получаем символы для ASCII-арта из состояния пользователя
         ascii_chars = user_states[message.chat.id]['ascii_chars']
+        # Получаем информацию о файле по его ID
         file_info = bot.get_file(photo_id)
+        # Скачиваем файл изображения
         downloaded_file = bot.download_file(file_info.file_path)
 
+        # Открываем скачанный файл как поток байтов
         with io.BytesIO(downloaded_file) as image_stream:
+            # Открываем изображение с помощью библиотеки PIL
             image = Image.open(image_stream)
-            width, height = image.size  # Получаем размер изображения
+            # Получаем размер изображения
+            width, height = image.size
+            # Логируем информацию о размере изображения и пользователе
             logger.info(
                 f"Пользователь с ID {user_id} преобразует изображение размером {width}x{height} пикселей в ASCII-арт с символами: {ascii_chars}")
 
+            # Преобразуем изображение в ASCII-арт
             ascii_art = image_to_ascii(image_stream, ascii_chars=ascii_chars, user_id=user_id)
+            # Отправляем ASCII-арт пользователю
             bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
     except UnidentifiedImageError:
+        # Обрабатываем ошибку, если изображение не удалось открыть
         handle_error(message, "Ошибка при открытии изображения")
     except Exception as e:
+        # Обрабатываем любые другие ошибки и логируем их
         handle_error(message, f"Ошибка при преобразовании изображения в ASCII-арт и отправке: {e}")
 
 
