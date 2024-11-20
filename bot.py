@@ -1,10 +1,10 @@
 import io
 import logging
-import time
 import random
+import threading
+import time
 from datetime import datetime
 from functools import wraps
-import threading
 
 import telebot
 from PIL import Image, UnidentifiedImageError, ImageOps
@@ -29,7 +29,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file: # /путь/к/файлу/token.txt
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:  # /путь/к/файлу/token.txt
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -297,7 +297,8 @@ def resize_for_sticker(image, max_size=256, user_id=None):
 def send_welcome(message, user_id=None):
     if message.text == '/start':
         # Отправляем приветственное сообщение пользователю
-        bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!", reply_markup=get_commands_keyboard())
+        bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!",
+                     reply_markup=get_commands_keyboard())
     elif message.text == '/help':
         # Отправляем текст справки пользователю
         help_text = get_help_text()
@@ -616,7 +617,6 @@ def check_chat_state():
 
 # Запускаем поток для проверки состояния чата
 threading.Thread(target=check_chat_state, daemon=True).start()
-
 
 # Запускаем бота
 try:
