@@ -1,12 +1,16 @@
 import io
 import logging
 import time
+import random
 from datetime import datetime
 from functools import wraps
+import threading
 
 import telebot
 from PIL import Image, UnidentifiedImageError, ImageOps
 from telebot import types
+
+from jokes import JOKES  # Импортируем список шуток из файла jokes.py
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -25,7 +29,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/путь/к/файлу/token.txt', 'r') as file:
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file: # /путь/к/файлу/token.txt
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -60,8 +64,6 @@ def delete_webhook():
         # Логируем ошибку, если удаление вебхука не удалось
         logger.error(f"Ошибка при удалении вебхука: {e}")
 
-    # Вызываем функцию для удаления вебхука
-
 
 delete_webhook()
 
@@ -85,7 +87,8 @@ function_to_action = {
     'process_image': 'обрабатывает изображение',
     'process_ascii_art': 'обрабатывает ASCII-арт',
     'convert_to_heatmap': 'преобразует изображение в тепловую карту',
-    'resize_for_sticker': 'изменяет размер изображения для стикера'
+    'resize_for_sticker': 'изменяет размер изображения для стикера',
+    'send_random_joke': 'отправляет случайную шутку'
 }
 
 
@@ -292,8 +295,95 @@ def resize_for_sticker(image, max_size=256, user_id=None):
 @bot.message_handler(commands=['start', 'help'])
 @log_function
 def send_welcome(message, user_id=None):
-    # Отправляем приветственное сообщение пользователю
-    bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!")
+    if message.text == '/start':
+        # Отправляем приветственное сообщение пользователю
+        bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!", reply_markup=get_commands_keyboard())
+    elif message.text == '/help':
+        # Отправляем текст справки пользователю
+        help_text = get_help_text()
+        bot.reply_to(message, help_text)
+
+
+# Обработчик команды /random_joke
+@bot.message_handler(commands=['random_joke'])
+@log_function
+def send_random_joke(message, user_id=None):
+    # Выбираем случайную шутку из списка
+    joke = random.choice(JOKES)
+    # Отправляем шутку пользователю
+    bot.reply_to(message, joke)
+
+
+# Обработчик команды /pixelate
+@bot.message_handler(commands=['pixelate'])
+@log_function
+def handle_pixelate(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Пикселизация вашего изображения...")
+    # Обрабатываем изображение с помощью функции пикселизации
+    process_image(message, pixelate_image, 20, user_id=message.chat.id)
+
+
+# Обработчик команды /ascii
+@bot.message_handler(commands=['ascii'])
+@log_function
+def handle_ascii(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Преобразование вашего изображения в формат ASCII art...")
+    # Запрашиваем у пользователя набор символов для ASCII-арта
+    bot.send_message(message.chat.id, "Пожалуйста, введите набор символов для ASCII-арта.")
+    # Устанавливаем состояние пользователя в ожидание ввода символов
+    user_states[message.chat.id] = {'ascii_chars': 'waiting'}
+
+
+# Обработчик команды /invert
+@bot.message_handler(commands=['invert'])
+@log_function
+def handle_invert(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Инверсия цветов вашего изображения...")
+    # Обрабатываем изображение с помощью функции инверсии цветов
+    process_image(message, invert_colors, user_id=message.chat.id)
+
+
+# Обработчик команды /mirror_horizontal
+@bot.message_handler(commands=['mirror_horizontal'])
+@log_function
+def handle_mirror_horizontal(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Отражение вашего изображения по горизонтали...")
+    # Обрабатываем изображение с помощью функции отражения по горизонтали
+    process_image(message, mirror_image, 'horizontal', user_id=message.chat.id)
+
+
+# Обработчик команды /mirror_vertical
+@bot.message_handler(commands=['mirror_vertical'])
+@log_function
+def handle_mirror_vertical(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Отражение вашего изображения по вертикали...")
+    # Обрабатываем изображение с помощью функции отражения по вертикали
+    process_image(message, mirror_image, 'vertical', user_id=message.chat.id)
+
+
+# Обработчик команды /heatmap
+@bot.message_handler(commands=['heatmap'])
+@log_function
+def handle_heatmap(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Преобразование вашего изображения в тепловую карту...")
+    # Обрабатываем изображение с помощью функции преобразования в тепловую карту
+    process_image(message, convert_to_heatmap, user_id=message.chat.id)
+
+
+# Обработчик команды /resize_sticker
+@bot.message_handler(commands=['resize_sticker'])
+@log_function
+def handle_resize_sticker(message, user_id=None):
+    # Отправляем сообщение о начале обработки
+    bot.reply_to(message, "Изменение размера изображения для стикера...")
+    # Обрабатываем изображение с помощью функции изменения размера для стикера
+    process_image(message, resize_for_sticker, user_id=message.chat.id)
 
 
 # Обработчик получения фотографий
@@ -329,6 +419,19 @@ def get_options_keyboard(user_id=None):
     # Добавляем кнопки на клавиатуру
     keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_horizontal_btn, mirror_vertical_btn, heatmap_btn,
                  resize_sticker_btn)
+    # Возвращаем созданную клавиатуру
+    return keyboard
+
+
+# Функция для создания клавиатуры с командами
+@log_function
+def get_commands_keyboard():
+    # Создаем объект клавиатуры
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    # Создаем кнопку для вывода списка команд
+    commands_btn = types.KeyboardButton("Список команд")
+    # Добавляем кнопку на клавиатуру
+    keyboard.add(commands_btn)
     # Возвращаем созданную клавиатуру
     return keyboard
 
@@ -459,6 +562,60 @@ def process_ascii_art(message, user_id=None):
     except Exception as e:
         # Обрабатываем любые другие ошибки и логируем их
         handle_error(message, f"Ошибка при преобразовании изображения в ASCII-арт и отправке: {e}")
+
+
+# Обработчик команды "Список команд"
+@bot.message_handler(func=lambda message: message.text == "Список команд")
+@log_function
+def show_commands(message, user_id=None):
+    # Формируем сообщение со списком команд и их описаниями
+    commands_message = (
+        "/start - Начать работу с ботом\n"
+        "/help - Получить помощь\n"
+        "/random_joke - Случайная шутка\n"
+        "/pixelate - Пикселизация изображения\n"
+        "/ascii - Преобразование изображения в ASCII-арт\n"
+        "/invert - Инвертировать цвета изображения\n"
+        "/mirror_horizontal - Отразить изображение по горизонтали\n"
+        "/mirror_vertical - Отразить изображение по вертикали\n"
+        "/heatmap - Преобразование изображения в тепловую карту\n"
+        "/resize_sticker - Изменить размер изображения для стикера\n"
+    )
+    # Отправляем сообщение с командами пользователю
+    bot.send_message(message.chat.id, commands_message)
+
+
+# Функция для чтения текста справки из файла help.txt
+def get_help_text():
+    """
+    Читает текст справки из файла help.txt.
+
+    Returns:
+        str: Текст справки.
+    """
+    try:
+        with open('help.txt', 'r', encoding='utf-8') as file:
+            return file.read()
+    except FileNotFoundError:
+        return "Файл справки не найден."
+
+
+# Функция для проверки состояния чата
+def check_chat_state():
+    while True:
+        time.sleep(60)  # Проверяем состояние чата каждую минуту
+        for chat_id in list(user_states.keys()):
+            try:
+                # Проверяем, существует ли чат
+                bot.send_chat_action(chat_id, 'typing')
+            except telebot.apihelper.ApiException:
+                # Если чат не существует, сбрасываем историю событий
+                del user_states[chat_id]
+                logger.info(f"Сброс истории событий для чата с ID {chat_id}")
+
+
+# Запускаем поток для проверки состояния чата
+threading.Thread(target=check_chat_state, daemon=True).start()
 
 
 # Запускаем бота
