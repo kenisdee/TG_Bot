@@ -10,7 +10,7 @@ import telebot
 from PIL import Image, UnidentifiedImageError, ImageOps
 from telebot import types
 
-from jokes import JOKES  # Импортируем список шуток из файла jokes.py
+from lists import JOKES, COMPLIMENTS
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -88,7 +88,8 @@ function_to_action = {
     'process_ascii_art': 'обрабатывает ASCII-арт',
     'convert_to_heatmap': 'преобразует изображение в тепловую карту',
     'resize_for_sticker': 'изменяет размер изображения для стикера',
-    'send_random_joke': 'отправляет случайную шутку'
+    'send_random_joke': 'отправляет случайную шутку',
+    'send_random_compliment': 'отправляет случайный комплимент'
 }
 
 
@@ -313,6 +314,23 @@ def send_random_joke(message, user_id=None):
     joke = random.choice(JOKES)
     # Отправляем шутку пользователю
     bot.reply_to(message, joke)
+
+
+# Обработчик команды /random_compliment
+@bot.message_handler(commands=['random_compliment'])
+@log_function
+def send_random_compliment(message, user_id=None):
+    """
+    Отправляет пользователю случайный комплимент из списка COMPLIMENTS.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
+    # Выбираем случайный комплимент из списка
+    compliment = random.choice(COMPLIMENTS)
+    # Отправляем комплимент пользователю
+    bot.reply_to(message, compliment)
 
 
 # Обработчик команды /pixelate
@@ -574,6 +592,7 @@ def show_commands(message, user_id=None):
         "/start - Начать работу с ботом\n"
         "/help - Получить помощь\n"
         "/random_joke - Случайная шутка\n"
+        "/random_compliment - Случайный комплимент\n"
         "/pixelate - Пикселизация изображения\n"
         "/ascii - Преобразование изображения в ASCII-арт\n"
         "/invert - Инвертировать цвета изображения\n"
