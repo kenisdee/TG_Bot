@@ -29,7 +29,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/путь/к/файлу/token.txt', 'r') as file:
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file: # /путь/к/файлу/token.txt
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -88,8 +88,18 @@ function_to_action = {
     'process_ascii_art': 'обрабатывает ASCII-арт',
     'convert_to_heatmap': 'преобразует изображение в тепловую карту',
     'resize_for_sticker': 'изменяет размер изображения для стикера',
-    'send_random_joke': 'отправляет случайную шутку',
-    'send_random_compliment': 'отправляет случайный комплимент'
+    'send_random_joke': 'получает случайную шутку',
+    'send_random_compliment': 'получает случайный комплимент',
+    'show_commands': 'получает список команд',
+    'get_commands_keyboard': 'получает клавиатуру с командами',
+    'flip_coin': 'подбрасывает монетку',
+    'handle_resize_sticker': 'изменяет размер изображения для стикера',
+    'handle_heatmap': 'преобразует изображение в тепловую карту',
+    'handle_mirror_vertical': 'отражает изображение по вертикали',
+    'handle_mirror_horizontal': 'отражает изображение по горизонтали',
+    'handle_ascii': 'обрабатывает ASCII-арт',
+    'handle_pixelate': 'пикселизирует изображение',
+    'grayify': 'преобразует изображение в оттенки серого'
 }
 
 
@@ -97,7 +107,21 @@ function_to_action = {
 def log_function(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # Извлекаем user_id из kwargs или args
         user_id = kwargs.get('user_id')
+        if not user_id:
+            for arg in args:
+                if isinstance(arg, types.Message):
+                    user_id = arg.chat.id
+                    break
+                elif isinstance(arg, types.CallbackQuery):
+                    user_id = arg.message.chat.id
+                    break
+
+        # Если user_id все еще None, устанавливаем его в "Unknown"
+        if not user_id:
+            user_id = "Unknown"
+
         action = function_to_action.get(func.__name__, f"выполняет неизвестное действие ({func.__name__})")
         start_time = time.time()  # Засекаем время начала обработки
         start_time_str = datetime.fromtimestamp(start_time).strftime(
@@ -299,7 +323,7 @@ def send_welcome(message, user_id=None):
     if message.text == '/start':
         # Отправляем приветственное сообщение пользователю
         bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!",
-                     reply_markup=get_commands_keyboard())
+                     reply_markup=get_commands_keyboard(user_id=message.chat.id))
     elif message.text == '/help':
         # Отправляем текст справки пользователю
         help_text = get_help_text()
@@ -332,6 +356,23 @@ def send_random_compliment(message, user_id=None):
     # Отправляем комплимент пользователю
     bot.reply_to(message, compliment)
 
+
+# Обработчик команды /flip_coin
+@bot.message_handler(commands=['flip_coin'])
+@log_function
+def flip_coin(message, user_id=None):
+    """
+    Симулирует подбрасывание монетки и сообщает пользователю результат ("Орел" или "Решка").
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
+    # Случайный выбор между "Heads" и "Tails"
+    result = random.choice(["Орел", "Решка"])
+
+    # Отправляем результат пользователю
+    bot.reply_to(message, f"Результат подбрасывания монетки: {result}")
 
 # Обработчик команды /pixelate
 @bot.message_handler(commands=['pixelate'])
@@ -444,7 +485,7 @@ def get_options_keyboard(user_id=None):
 
 # Функция для создания клавиатуры с командами
 @log_function
-def get_commands_keyboard():
+def get_commands_keyboard(user_id=None):
     # Создаем объект клавиатуры
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     # Создаем кнопку для вывода списка команд
@@ -459,12 +500,13 @@ def get_commands_keyboard():
 @bot.callback_query_handler(func=lambda call: True)
 @log_function
 def callback_query(call, user_id=None):
+    user_id = call.message.chat.id
     # Проверяем, какой вариант выбрал пользователь
     if call.data == "pixelate":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Пикселизация вашего изображения...")
         # Обрабатываем изображение с помощью функции пикселизации
-        process_image(call.message, pixelate_image, 20, user_id=call.message.chat.id)
+        process_image(call.message, pixelate_image, 20, user_id=user_id)
     elif call.data == "ascii":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Преобразование вашего изображения в формат ASCII art...")
@@ -476,27 +518,27 @@ def callback_query(call, user_id=None):
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Инверсия цветов вашего изображения...")
         # Обрабатываем изображение с помощью функции инверсии цветов
-        process_image(call.message, invert_colors, user_id=call.message.chat.id)
+        process_image(call.message, invert_colors, user_id=user_id)
     elif call.data == "mirror_horizontal":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Отражение вашего изображения по горизонтали...")
         # Обрабатываем изображение с помощью функции отражения по горизонтали
-        process_image(call.message, mirror_image, 'horizontal', user_id=call.message.chat.id)
+        process_image(call.message, mirror_image, 'horizontal', user_id=user_id)
     elif call.data == "mirror_vertical":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Отражение вашего изображения по вертикали...")
         # Обрабатываем изображение с помощью функции отражения по вертикали
-        process_image(call.message, mirror_image, 'vertical', user_id=call.message.chat.id)
+        process_image(call.message, mirror_image, 'vertical', user_id=user_id)
     elif call.data == "heatmap":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Преобразование вашего изображения в тепловую карту...")
         # Обрабатываем изображение с помощью функции преобразования в тепловую карту
-        process_image(call.message, convert_to_heatmap, user_id=call.message.chat.id)
+        process_image(call.message, convert_to_heatmap, user_id=user_id)
     elif call.data == "resize_sticker":
         # Отвечаем на запрос обратного вызова, чтобы показать индикатор загрузки
         bot.answer_callback_query(call.id, "Изменение размера изображения для стикера...")
         # Обрабатываем изображение с помощью функции изменения размера для стикера
-        process_image(call.message, resize_for_sticker, user_id=call.message.chat.id)
+        process_image(call.message, resize_for_sticker, user_id=user_id)
 
 
 # Обработчик ввода символов для ASCII-арта
@@ -600,6 +642,7 @@ def show_commands(message, user_id=None):
         "/mirror_vertical - Отразить изображение по вертикали\n"
         "/heatmap - Преобразование изображения в тепловую карту\n"
         "/resize_sticker - Изменить размер изображения для стикера\n"
+        "/flip_coin - Подбросить монетку и получить результат (\"Орел\" или \"Решка\")\n"
     )
     # Отправляем сообщение с командами пользователю
     bot.send_message(message.chat.id, commands_message)
