@@ -159,6 +159,17 @@ def handle_error(message, error_message):
 # Функция для изменения размера изображения
 @log_function
 def resize_image(image, new_width=100, user_id=None):
+    """
+    Изменяет размер изображения, сохраняя пропорции.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+        new_width (int): Новая ширина изображения.
+        user_id (int): ID пользователя.
+
+    Returns:
+        PIL.Image: Изображение с измененным размером.
+    """
     # Получаем текущие размеры изображения
     width, height = image.size
     # Вычисляем соотношение сторон
@@ -172,6 +183,16 @@ def resize_image(image, new_width=100, user_id=None):
 # Функция для преобразования изображения в оттенки серого
 @log_function
 def grayify(image, user_id=None):
+    """
+    Преобразует изображение в оттенки серого.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+        user_id (int): ID пользователя.
+
+    Returns:
+        PIL.Image: Изображение в оттенках серого.
+    """
     # Преобразуем изображение в оттенки серого и возвращаем его в оттенках серого
     return image.convert("L")
 
@@ -179,6 +200,19 @@ def grayify(image, user_id=None):
 # Функция для преобразования изображения в ASCII-арт
 @log_function
 def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS, user_id=None):
+    """
+    Преобразует изображение в ASCII-арт.
+
+    Args:
+        image_stream (io.BytesIO): Поток байтов с изображением.
+        new_width (int): Новая ширина изображения.
+        ascii_chars (str): Набор символов для ASCII-арта.
+        user_id (int): ID пользователя.
+
+    Returns:
+        str: ASCII-арт изображения.
+    """
+
     # Открываем изображение из потока и преобразуем его в оттенки серого
     image = Image.open(image_stream).convert('L')
     # Получаем размеры изображения
@@ -209,6 +243,17 @@ def image_to_ascii(image_stream, new_width=40, ascii_chars=DEFAULT_ASCII_CHARS, 
 # Функция для преобразования пикселей в ASCII-символы
 @log_function
 def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS, user_id=None):
+    """
+    Преобразует пиксели изображения в ASCII-символы.
+
+    Args:
+        image (PIL.Image): Изображение в оттенках серого.
+        ascii_chars (str): Набор символов для ASCII-арта.
+        user_id (int): ID пользователя.
+
+    Returns:
+        str: Строка с ASCII-символами.
+    """
     # Получаем данные о пикселях изображения
     pixels = image.getdata()
     # Инициализируем строку для хранения ASCII-символов
@@ -226,6 +271,17 @@ def pixels_to_ascii(image, ascii_chars=DEFAULT_ASCII_CHARS, user_id=None):
 # Функция для пикселизации изображения
 @log_function
 def pixelate_image(image, pixel_size, user_id=None):
+    """
+    Пикселизирует изображение.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+        pixel_size (int): Размер пикселя.
+        user_id (int): ID пользователя.
+
+    Returns:
+        PIL.Image: Пикселизованное изображение.
+    """
     # Уменьшаем изображение до размера, кратного pixel_size, используя метод ближайшего соседа
     image = image.resize(
         (image.size[0] // pixel_size, image.size[1] // pixel_size),
@@ -243,6 +299,16 @@ def pixelate_image(image, pixel_size, user_id=None):
 # Функция для инверсии цветов изображения
 @log_function
 def invert_colors(image, user_id=None):
+    """
+    Инвертирует цвета изображения.
+
+    Args:
+        image (PIL.Image): Исходное изображение.
+        user_id (int): ID пользователя.
+
+    Returns:
+        PIL.Image: Изображение с инвертированными цветами.
+    """
     # Инвертируем цвета изображения с помощью функции invert из модуля ImageOps
     return ImageOps.invert(image)
 
@@ -256,6 +322,7 @@ def mirror_image(image, direction, user_id=None):
     Args:
         image (PIL.Image): Исходное изображение.
         direction (str): Направление отражения ('horizontal' или 'vertical').
+        user_id (int): ID пользователя.
 
     Returns:
         PIL.Image: Отраженное изображение.
@@ -279,6 +346,7 @@ def convert_to_heatmap(image, user_id=None):
 
     Args:
         image (PIL.Image): Исходное изображение.
+        user_id (int): ID пользователя.
 
     Returns:
         PIL.Image: Изображение в виде тепловой карты.
@@ -300,6 +368,7 @@ def resize_for_sticker(image, max_size=256, user_id=None):
     Args:
         image (PIL.Image): Исходное изображение.
         max_size (int): Максимальный размер изображения (по умолчанию 256 пикселей).
+        user_id (int): ID пользователя.
 
     Returns:
         PIL.Image: Изображение с измененным размером.
@@ -320,6 +389,13 @@ def resize_for_sticker(image, max_size=256, user_id=None):
 @bot.message_handler(commands=['start', 'help'])
 @log_function
 def send_welcome(message, user_id=None):
+    """
+    Обрабатывает команды /start и /help.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     if message.text == '/start':
         # Отправляем приветственное сообщение пользователю
         bot.reply_to(message, "Пришлите мне изображение, и я предложу вам варианты!",
@@ -335,6 +411,13 @@ def send_welcome(message, user_id=None):
 @bot.message_handler(func=lambda message: message.text == "Случайная шутка")
 @log_function
 def send_random_joke(message, user_id=None):
+    """
+    Отправляет пользователю случайную шутку из списка JOKES.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Выбираем случайную шутку из списка
     joke = random.choice(JOKES)
     # Отправляем шутку пользователю
@@ -382,6 +465,13 @@ def flip_coin(message, user_id=None):
 @bot.message_handler(commands=['pixelate'])
 @log_function
 def handle_pixelate(message, user_id=None):
+    """
+    Обрабатывает команду /pixelate для пикселизации изображения.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Пикселизация вашего изображения...")
     # Обрабатываем изображение с помощью функции пикселизации
@@ -392,6 +482,13 @@ def handle_pixelate(message, user_id=None):
 @bot.message_handler(commands=['ascii'])
 @log_function
 def handle_ascii(message, user_id=None):
+    """
+    Обрабатывает команду /ascii для преобразования изображения в ASCII-арт.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Преобразование вашего изображения в формат ASCII art...")
     # Запрашиваем у пользователя набор символов для ASCII-арта
@@ -404,6 +501,13 @@ def handle_ascii(message, user_id=None):
 @bot.message_handler(commands=['invert'])
 @log_function
 def handle_invert(message, user_id=None):
+    """
+    Обрабатывает команду /invert для инверсии цветов изображения.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Инверсия цветов вашего изображения...")
     # Обрабатываем изображение с помощью функции инверсии цветов
@@ -414,6 +518,13 @@ def handle_invert(message, user_id=None):
 @bot.message_handler(commands=['mirror_horizontal'])
 @log_function
 def handle_mirror_horizontal(message, user_id=None):
+    """
+    Обрабатывает команду /mirror_horizontal для отражения изображения по горизонтали.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Отражение вашего изображения по горизонтали...")
     # Обрабатываем изображение с помощью функции отражения по горизонтали
@@ -424,6 +535,13 @@ def handle_mirror_horizontal(message, user_id=None):
 @bot.message_handler(commands=['mirror_vertical'])
 @log_function
 def handle_mirror_vertical(message, user_id=None):
+    """
+    Обрабатывает команду /mirror_vertical для отражения изображения по вертикали.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Отражение вашего изображения по вертикали...")
     # Обрабатываем изображение с помощью функции отражения по вертикали
@@ -434,6 +552,13 @@ def handle_mirror_vertical(message, user_id=None):
 @bot.message_handler(commands=['heatmap'])
 @log_function
 def handle_heatmap(message, user_id=None):
+    """
+    Обрабатывает команду /heatmap для преобразования изображения в тепловую карту.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Преобразование вашего изображения в тепловую карту...")
     # Обрабатываем изображение с помощью функции преобразования в тепловую карту
@@ -444,6 +569,13 @@ def handle_heatmap(message, user_id=None):
 @bot.message_handler(commands=['resize_sticker'])
 @log_function
 def handle_resize_sticker(message, user_id=None):
+    """
+    Обрабатывает команду /resize_sticker для изменения размера изображения для стикера.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем сообщение о начале обработки
     bot.reply_to(message, "Изменение размера изображения для стикера...")
     # Обрабатываем изображение с помощью функции изменения размера для стикера
@@ -454,6 +586,13 @@ def handle_resize_sticker(message, user_id=None):
 @bot.message_handler(content_types=['photo'])
 @log_function
 def handle_photo(message, user_id=None):
+    """
+    Обрабатывает полученные фотографии и предлагает пользователю варианты действий.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Отправляем ответное сообщение с предложением выбрать действие
     bot.reply_to(message, "У меня есть ваша фотография! Пожалуйста, выберите, что бы вы хотели с ней сделать.",
                  reply_markup=get_options_keyboard(user_id=message.chat.id))
@@ -464,6 +603,15 @@ def handle_photo(message, user_id=None):
 # Функция для создания клавиатуры с вариантами действий
 @log_function
 def get_options_keyboard(user_id=None):
+    """
+    Создает клавиатуру с вариантами действий над изображением.
+
+    Args:
+        user_id (int): ID пользователя.
+
+    Returns:
+        telebot.types.InlineKeyboardMarkup: Клавиатура с вариантами действий.
+    """
     # Создаем объект клавиатуры
     keyboard = types.InlineKeyboardMarkup()
     # Создаем кнопку для пикселизации изображения
@@ -490,6 +638,15 @@ def get_options_keyboard(user_id=None):
 # Функция для создания клавиатуры с командами
 @log_function
 def get_commands_keyboard(user_id=None):
+    """
+    Создает клавиатуру с командами бота.
+
+    Args:
+        user_id (int): ID пользователя.
+
+    Returns:
+        telebot.types.ReplyKeyboardMarkup: Клавиатура с командами.
+    """
     # Создаем объект клавиатуры
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     # Создаем кнопку для отправки случайной шутки
@@ -510,6 +667,13 @@ def get_commands_keyboard(user_id=None):
 @bot.callback_query_handler(func=lambda call: True)
 @log_function
 def callback_query(call, user_id=None):
+    """
+    Обрабатывает запросы обратного вызова от пользователя.
+
+    Args:
+        call (telebot.types.CallbackQuery): Запрос обратного вызова.
+        user_id (int): ID пользователя.
+    """
     user_id = call.message.chat.id
     # Проверяем, какой вариант выбрал пользователь
     if call.data == "pixelate":
@@ -555,6 +719,13 @@ def callback_query(call, user_id=None):
 @bot.message_handler(func=lambda message: user_states.get(message.chat.id, {}).get('ascii_chars') == 'waiting')
 @log_function
 def get_ascii_chars(message, user_id=None):
+    """
+    Обрабатывает ввод пользователем символов для ASCII-арта.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Сохраняем введенные пользователем символы для ASCII-арта
     user_states[message.chat.id]['ascii_chars'] = message.text
     # Вызываем функцию для обработки ASCII-арта с использованием введенных символов
@@ -564,6 +735,15 @@ def get_ascii_chars(message, user_id=None):
 # Функция для обработки изображения и отправки результата
 @log_function
 def process_image(message, image_processing_func, *args, user_id=None):
+    """
+    Обрабатывает изображение с помощью переданной функции и отправляет результат пользователю.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        image_processing_func (function): Функция для обработки изображения.
+        *args: Дополнительные аргументы для функции обработки изображения.
+        user_id (int): ID пользователя.
+    """
     try:
         # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
@@ -603,6 +783,13 @@ def process_image(message, image_processing_func, *args, user_id=None):
 # Функция для обработки ASCII-арта и отправки результата
 @log_function
 def process_ascii_art(message, user_id=None):
+    """
+    Обрабатывает изображение и преобразует его в ASCII-арт, затем отправляет результат пользователю.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     try:
         # Получаем ID фотографии из состояния пользователя
         photo_id = user_states[message.chat.id]['photo']
@@ -639,12 +826,17 @@ def process_ascii_art(message, user_id=None):
 @bot.message_handler(func=lambda message: message.text == "Список команд")
 @log_function
 def show_commands(message, user_id=None):
+    """
+    Отправляет пользователю список доступных команд бота.
+
+    Args:
+        message (telebot.types.Message): Сообщение от пользователя.
+        user_id (int): ID пользователя.
+    """
     # Формируем сообщение со списком команд и их описаниями
     commands_message = (
         "/start - Начать работу с ботом\n"
         "/help - Получить помощь\n"
-        "/random_joke - Случайная шутка\n"
-        "/random_compliment - Случайный комплимент\n"
         "/pixelate - Пикселизация изображения\n"
         "/ascii - Преобразование изображения в ASCII-арт\n"
         "/invert - Инвертировать цвета изображения\n"
@@ -652,6 +844,8 @@ def show_commands(message, user_id=None):
         "/mirror_vertical - Отразить изображение по вертикали\n"
         "/heatmap - Преобразование изображения в тепловую карту\n"
         "/resize_sticker - Изменить размер изображения для стикера\n"
+        "/random_joke - Случайная шутка\n"
+        "/random_compliment - Случайный комплимент\n"
         "/flip_coin - Подбросить монетку и получить результат (\"Орел\" или \"Решка\")\n"
     )
     # Отправляем сообщение с командами пользователю
@@ -675,6 +869,9 @@ def get_help_text():
 
 # Функция для проверки состояния чата
 def check_chat_state():
+    """
+    Проверяет состояние чата каждую минуту и сбрасывает историю событий для несуществующих чатов.
+    """
     while True:
         time.sleep(60)  # Проверяем состояние чата каждую минуту
         for chat_id in list(user_states.keys()):
