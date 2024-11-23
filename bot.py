@@ -29,7 +29,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:  # /путь/к/файлу/token.txt
+        with open('/путь/к/файлу/token.txt', 'r') as file:
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
