@@ -29,7 +29,7 @@ def get_token():
     logger.info("Чтение токена бота из файла")
     try:
         # Открываем файл с токеном
-        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file: # /путь/к/файлу/token.txt
+        with open('/Users/kenisdee/TG_Token/token.txt', 'r') as file:  # /путь/к/файлу/token.txt
             # Читаем и возвращаем токен, удаляя лишние пробелы
             return file.read().strip()
     except FileNotFoundError:
@@ -332,6 +332,7 @@ def send_welcome(message, user_id=None):
 
 # Обработчик команды /random_joke
 @bot.message_handler(commands=['random_joke'])
+@bot.message_handler(func=lambda message: message.text == "Случайная шутка")
 @log_function
 def send_random_joke(message, user_id=None):
     # Выбираем случайную шутку из списка
@@ -342,6 +343,7 @@ def send_random_joke(message, user_id=None):
 
 # Обработчик команды /random_compliment
 @bot.message_handler(commands=['random_compliment'])
+@bot.message_handler(func=lambda message: message.text == "Случайный комплимент")
 @log_function
 def send_random_compliment(message, user_id=None):
     """
@@ -359,6 +361,7 @@ def send_random_compliment(message, user_id=None):
 
 # Обработчик команды /flip_coin
 @bot.message_handler(commands=['flip_coin'])
+@bot.message_handler(func=lambda message: message.text == "Подбросить монетку")
 @log_function
 def flip_coin(message, user_id=None):
     """
@@ -373,6 +376,7 @@ def flip_coin(message, user_id=None):
 
     # Отправляем результат пользователю
     bot.reply_to(message, f"Результат подбрасывания монетки: {result}")
+
 
 # Обработчик команды /pixelate
 @bot.message_handler(commands=['pixelate'])
@@ -488,10 +492,16 @@ def get_options_keyboard(user_id=None):
 def get_commands_keyboard(user_id=None):
     # Создаем объект клавиатуры
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    # Создаем кнопку для отправки случайной шутки
+    random_joke_btn = types.KeyboardButton("Случайная шутка")
+    # Создаем кнопку для отправки случайного комплимента
+    random_compliment_btn = types.KeyboardButton("Случайный комплимент")
+    # Создаем кнопку для подбрасывания монетки
+    flip_coin_btn = types.KeyboardButton("Подбросить монетку")
     # Создаем кнопку для вывода списка команд
     commands_btn = types.KeyboardButton("Список команд")
-    # Добавляем кнопку на клавиатуру
-    keyboard.add(commands_btn)
+    # Добавляем кнопки на клавиатуру
+    keyboard.add(random_joke_btn, random_compliment_btn, flip_coin_btn, commands_btn)
     # Возвращаем созданную клавиатуру
     return keyboard
 
